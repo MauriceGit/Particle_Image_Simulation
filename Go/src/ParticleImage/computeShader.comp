@@ -20,6 +20,10 @@ layout (std430, binding = 0) buffer PositionBuffer {
 uniform float dt;
 uniform bool  collapse;
 
+float rand(vec2 co){
+    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+}
+
 void main(void)
 {
     if (collapse) {
@@ -45,7 +49,8 @@ void main(void)
         }
 
         if (pos.y < -50.0) {
-            v.y *= -1.0;
+
+            v.y *= -rand(pos.xy)*1.0;
         }
 
         if (pos.x < -50 || pos.x > 50) {
