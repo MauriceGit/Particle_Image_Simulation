@@ -16,7 +16,6 @@ echo "Get Libaries"
 go get "github.com/go-gl/gl/v4.5-core/gl"
 go get "github.com/go-gl/glfw/v3.2/glfw"
 go get "github.com/go-gl/mathgl/mgl32"
-go get "github.com/fogleman/ln/ln"
 
 echo "Build Task"
 go install ParticleImage
