@@ -47,6 +47,8 @@ var g_particles Particles
 
 var g_collapseImage int32 = 0
 
+var g_colorInterpolation float32 = 0.0;
+
 func init() {
     // GLFW event handling must run on the main OS thread
     runtime.LockOSThread()
@@ -256,7 +258,7 @@ func renderParticles(shader uint32, color mgl32.Vec3) {
 
     gl.BindVertexArray(g_particles.GeoAttrib.VertexObject)
 
-    gl.Uniform3fv(gl.GetUniformLocation(shader, gl.Str("color\x00")), 1, &color[0])
+    gl.Uniform1fv(gl.GetUniformLocation(shader, gl.Str("colorInterpolation\x00")), 1, &g_colorInterpolation)
 
     // And draw one panel.
     gl.DrawArrays(gl.POINTS, 0, g_particles.GeoAttrib.VertexCount)
@@ -335,14 +337,22 @@ func displayFPS(window *glfw.Window) {
     currentTime := glfw.GetTime()
     g_interval = float32(currentTime - g_lastCallTime)
 
-    g_frameCount += 1
+
+    if g_collapseImage == 1 {
+        if g_colorInterpolation < 1.0 {
+            g_colorInterpolation += g_interval/5.0
+        }
+    }
 
     if g_frameCount%60 == 0 {
-        g_fps = float32(g_frameCount) / g_interval
+        g_fps = float32(1.0) / g_interval
 
         s := fmt.Sprintf("FPS: %.2f", g_fps)
         window.SetTitle(s)
     }
+
+    g_lastCallTime = currentTime
+    g_frameCount += 1
 
 }
 

@@ -1,14 +1,11 @@
 package geometry
 
 import (
+    . "ParticleImage/Image"
     "github.com/go-gl/gl/v4.5-core/gl"
     "github.com/go-gl/mathgl/mgl32"
     "fmt"
     "unsafe"
-    "image"
-    "os"
-    //"golang.org/x/image/bmp"
-    "image/png"
     "math/rand"
 )
 
@@ -32,7 +29,6 @@ type Particles struct {
     Positions       []Particle
     GeoAttrib       Geometry
 }
-
 
 func setRenderingAttributes(vertexArrayObject, arrayBuffer, location uint32, size int32, normalized bool, stride int, offset int) {
     // Find the last bindings so we don't overwrite them
@@ -73,6 +69,7 @@ func createParticleBuffers(particles []Particle) Geometry {
     // But, we HAVE to use a vec4 because of memory layout issues otherwise. The GPU only gets byte chunks the size of a vec4.
     setRenderingAttributes(particleGeo.VertexObject, particleGeo.ArrayBuffer, 0, 4, false, int(unsafe.Sizeof(emptyParticle)), 1*int(unsafe.Sizeof(emptyVec)))
     setRenderingAttributes(particleGeo.VertexObject, particleGeo.ArrayBuffer, 1, 4, false, int(unsafe.Sizeof(emptyParticle)), 2*int(unsafe.Sizeof(emptyVec)))
+    setRenderingAttributes(particleGeo.VertexObject, particleGeo.ArrayBuffer, 2, 4, false, int(unsafe.Sizeof(emptyParticle)), 3*int(unsafe.Sizeof(emptyVec)))
 
     return particleGeo
 }
@@ -87,26 +84,22 @@ func CreateParticles(rows, cols, maxWidth, maxHeight int) Particles {
     particles := Particles{}
     positions := make([]Particle, rows*cols)
 
-
-
-    image.RegisterFormat("png", "png", png.Decode, png.DecodeConfig)
-
-    fImg, err := os.Open("testImage.png")
+    // Load the end image.
+    startImage, err := LoadImage("image2.png")
     if err != nil {
-        fmt.Printf("Error while trying to load image testImage.bmp: %v.\n", err)
+        fmt.Printf("Error: %v.\n", err)
         return particles
     }
-    image, _, err := image.Decode(fImg)
+    startScaleFactorX := float32(startImage.RangeX() / cols)
+    startScaleFactorY := float32(startImage.RangeY() / rows)
+
+    endImage, err := LoadImage("image1.png")
     if err != nil {
-        fmt.Printf("Error while trying to decode image testImage.bmp: %v.\n", err)
+        fmt.Printf("Error: %v.\n", err)
         return particles
     }
-
-    imageRangeX := image.Bounds().Max.X - image.Bounds().Min.X
-    imageRangeY := image.Bounds().Max.Y - image.Bounds().Min.Y
-
-    scaleFactorX := float32(imageRangeX / cols)
-    scaleFactorY := float32(imageRangeY / rows)
+    endScaleFactorX := float32(endImage.RangeX() / cols)
+    endScaleFactorY := float32(endImage.RangeY() / rows)
 
     rand.Seed(42)
 
@@ -116,25 +109,25 @@ func CreateParticles(rows, cols, maxWidth, maxHeight int) Particles {
         y := float32(i / cols) * heightFactor + heightOffset
         z := float32(-10.0)
 
-        coordX := int((x-widthOffset)*scaleFactorX/widthFactor)
-        coordY := int((y-heightOffset)*scaleFactorY/heightFactor)
+        startCoordX := int((x-widthOffset)*startScaleFactorX/widthFactor)
+        startCoordY := int((y-heightOffset)*startScaleFactorY/heightFactor)
 
-        r,g,b,a := image.At(coordX, imageRangeY-coordY).RGBA()
-        nr  := float32(r/257)
-        ng  := float32(g/257)
-        nb  := float32(b/257)
-        na  := float32(a/257)
+        sr,sg,sb,sa := startImage.RGBAAt(startCoordX, startCoordY, true)
 
-        randAccX := float32(rand.Float64()/ 1000.0)-float32(rand.Float64()/ 1000.0)
-        randAccY := float32(rand.Float64()/ 100.0)
-        //randAccZ := float32(rand.Float64()/ 1000.0)-float32(rand.Float64()/ 1000.0)
+        endCoordX := int((x-widthOffset)*endScaleFactorX/widthFactor)
+        endCoordY := int((y-heightOffset)*endScaleFactorY/heightFactor)
+
+        er, eg, eb, ea := endImage.RGBAAt(endCoordX, endCoordY, true)
+
+        //randAccX := float32(rand.Float64()/ 1000.0)-float32(rand.Float64()/ 1000.0)
+        randAccY := float32(rand.Float64() * 1.0)
 
         positions[i] = Particle{
             OriginalPos:      mgl32.Vec4{x, y, z, 0},
             Pos:              mgl32.Vec4{x, y, z, 0},
-            StartColor:       mgl32.Vec4{nr, ng, nb, na},
-            EndColor:         mgl32.Vec4{0,0,0,1},
-            Accelleration:    mgl32.Vec4{randAccX/100.0,-randAccY/100.0,0.0,0},
+            StartColor:       mgl32.Vec4{sr, sg, sb, sa},
+            EndColor:         mgl32.Vec4{er, eg, eb, ea},
+            Accelleration:    mgl32.Vec4{0.0,-randAccY,0.0,0},
             Speed:            mgl32.Vec4{0,0,0,0},
         }
     }

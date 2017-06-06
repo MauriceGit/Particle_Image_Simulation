@@ -29,33 +29,38 @@ void main(void)
     if (collapse) {
         uint index = gl_GlobalInvocationID.x;
 
-        vec4 a   = positions[index].accelleration;
-        vec4 v   = positions[index].speed;
-        vec4 pos = positions[index].position;
+        vec4 a    = positions[index].accelleration;
+        vec4 v    = positions[index].speed;
+        vec4 pos  = positions[index].position;
+        vec4 oPos = positions[index].origPosition;
 
-        v = (v + a * dt) * 0.999;
-        pos = pos + v * dt;
+        float newDT = dt * 15.0;
 
+        // If we go up again and are very close to the original position, just snap to it.
+        if ((v.y > 0.0 && (oPos.y-pos.y) <= 0.01) || pos.y > (oPos.y+0.01)) {
+            pos = oPos;
+            v = vec4(0,0,0,0);
+            a = vec4(0,0,0,0);
+        } else {
 
+            v = v + a * newDT;
+            pos = pos + v * newDT;
 
-        if (v.x < -0.5) {
-            v.x = -0.5;
-        }
-        if (v.x > 0.5) {
-            v.x = 0.5;
-        }
-        if (v.y < -0.5) {
-            v.y = -0.5;
-        }
+            // So particles don't get too fast.
+            if (v.y < -1.5) {
+                v.y = -1.5;
+            }
 
-        if (pos.y < -50.0) {
+            float randV = rand(oPos.xy);
+            randV = min(0.9, max(2.5, randV*3.0));
+            // But still get back up to the top!
+            if (v.y > 0.0 && v.y <= randV) {
+                v.y = randV;
+            }
 
-            v.y *= -rand(pos.xy)*1.0;
-        }
-
-        if (pos.x < -50 || pos.x > 50) {
-            //v.x *= -1.0;
-            a.x *= -1.0;
+            if (v.y < 0.0 && pos.y < -50.0) {
+                v.y *= -2.5;
+            }
         }
 
         // Store the new position and velocity back into the buffers
